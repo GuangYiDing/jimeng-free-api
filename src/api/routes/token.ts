@@ -1,9 +1,7 @@
 import _ from 'lodash';
 
 import Request from '@/lib/request/Request.ts';
-import Response from '@/lib/response/Response.ts';
-import { getTokenLiveStatus, getCredit, tokenSplit } from '@/api/controllers/core.ts';
-import logger from '@/lib/logger.ts';
+import {getCredit, getTokenLiveStatus, receiveCredit, tokenSplit} from '@/api/controllers/core.ts';
 
 export default {
 
@@ -25,13 +23,16 @@ export default {
                 .validate('headers.authorization', _.isString)
             // refresh_token切分
             const tokens = tokenSplit(request.headers.authorization);
-            const points = await Promise.all(tokens.map(async (token) => {
+            return await Promise.all(tokens.map(async (token) => {
+                const points = await getCredit(token);
+                if (points.totalCredit == 0) {
+                    await receiveCredit(token);
+                }
                 return {
                     token,
                     points: await getCredit(token)
                 }
-            }))
-            return points;
+            }));
         }
 
     }
